@@ -76,6 +76,21 @@ sample2(MySQLTemplate& template_)
     }
 }
 
+void
+sample3(MySQLTemplate& template_)
+{
+    const char *sql = "select sleep(10)";
+
+	NOPCallback cb;
+	
+	bool sqlRet = template_.execute(&cb, sql);
+    if (!sqlRet) {
+        printf("Fail to execute sql: %s errcode: %d errmsg:%s\n",
+                sql, cb.error_, cb.errorMsg_.data());
+    }
+    printf("sleep done!\n");
+}
+
 
 void*
 thread_loop(void* p)
@@ -85,7 +100,8 @@ thread_loop(void* p)
         try{
         //sample(template_);
         //sample1(template_);
-        sample2(*template_);
+        //sample2(*template_);
+        sample3(*template_);
         }catch(Exception &e) {
             printf("error: %s\n", e.what()); 
         }catch (...) {

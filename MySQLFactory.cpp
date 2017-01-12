@@ -19,7 +19,15 @@ namespace server {
             pthread_cond_init(&p.second->cache_not_empty_cond, NULL);
             for(int i=0;i<config.maxconns;i++)
             {
-                p.second->cache.push_back(new Connection());
+                p.second->cache.push_back(new Connection(config.user,
+                                                         config.passwd,
+                                                         config.database,
+                                                         config.host,
+                                                         config.port,
+                                                         config.connect_timeout,
+                                                         config.read_timeout,
+                                                         config.charset,
+                                                         config.autocommit));
             }
 			sources_.insert(p);
 		}
@@ -45,14 +53,7 @@ namespace server {
 				//YY_LOG_ERROR( "mysql db:%s not connect, try reconnect", name.c_str());
 
 				try {
-					conn->connect(
-						src->config.user,
-						src->config.passwd,
-						src->config.database,
-						src->config.host,
-						src->config.port,
-						src->config.charset,
-						src->config.autocommit);
+					conn->connect();
 				} catch (Exception &e) {
 					/*YY_LOG_ERROR( "connect mysql://%s:***@%s:%d/%s failed: %s",
 						src->config.user.c_str(),

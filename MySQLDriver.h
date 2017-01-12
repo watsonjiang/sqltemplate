@@ -125,7 +125,15 @@ namespace server {
 			friend class Statement;
             friend class MySQLFactory; 
 
-			Connection();
+			Connection(const std::string &user, 
+                       const std::string &passwd, 
+                       const std::string &db, 
+                       const std::string &host, 
+                       unsigned short port,
+                       unsigned int connect_timeout=3,
+                       unsigned int read_timeout=30,
+                       const std::string& charset="",
+                       bool autocommit=true);
 
 			~Connection();
 
@@ -133,7 +141,7 @@ namespace server {
 
 			void setCharSet(const std::string &name);
 
-			void connect(const std::string &user, const std::string &passwd, const std::string &db, const std::string &host, unsigned short port,const std::string& charset="",bool autocommit=true);
+			void connect();
 
 			void reconnect();
 
@@ -160,6 +168,8 @@ namespace server {
 			std::string charset_ ;
 			std::string host_;
 			unsigned short port_;
+            unsigned int connect_timeout_;
+            unsigned int read_timeout_;
 			bool        autocommit_ ;
 			MYSQL mysql_;
             MySQLFactory* factory_;

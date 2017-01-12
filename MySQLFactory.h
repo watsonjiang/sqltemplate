@@ -13,13 +13,15 @@ namespace server {
 
 	    class Connection;
 		struct MySQLConfig {
-            MySQLConfig():autocommit(1){}
+            MySQLConfig():autocommit(1), read_timeout(30), connect_timeout(3){}
 			std::string host;
 			unsigned short port;
 			std::string user;
 			std::string passwd;
 			std::string database;
 			std::string charset;
+            unsigned int read_timeout;
+            unsigned int connect_timeout;
 			bool		autocommit;
             unsigned int maxconns;
 		};

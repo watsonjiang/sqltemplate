@@ -89,10 +89,31 @@ std::string ResultSet::getString(const char *name) const {
 }
 
 /* Connection */
-Connection::Connection(): connected_(false) {
+Connection::Connection(const std::string &user, 
+                       const std::string &passwd, 
+                       const std::string &database, 
+                       const std::string &host, 
+                       unsigned short port,
+                       unsigned int connect_timeout,
+                       unsigned int read_timeout,
+                       const std::string& charset,
+                       bool autocommit) : connected_(false) {
 #ifdef LINUX
 	mysql_thread_init();
 #endif
+
+	user_ = user;
+	passwd_ = passwd;
+	database_ = database;
+	host_ = host;
+	port_ = port;
+	autocommit_ = autocommit ;
+    connect_timeout_ = (connect_timeout/3 > 0) ? connect_timeout/3 : 1; //mysql driver will retry 3 times.
+    read_timeout_ = (read_timeout/3 > 0)? read_timeout/3 : 1;
+	if ( charset.empty() )
+		charset_ = "utf8" ;
+	else
+		charset_ = charset ;
 }
 
 Connection::~Connection() {
@@ -102,25 +123,15 @@ Connection::~Connection() {
 #endif
 }
 
-void Connection::connect(const std::string &user, const std::string &passwd, const std::string &database, const std::string &host, unsigned short port,const std::string& charset,bool autocommit) {
+void Connection::connect(){
 	if (connected_) {
 		return;
 	}
 
-	user_ = user;
-	passwd_ = passwd;
-	database_ = database;
-	host_ = host;
-	port_ = port;
-	autocommit_ = autocommit ;
-	if ( charset.empty() )
-		charset_ = "utf8" ;
-	else
-		charset_ = charset ;
-
 	assert(mysql_init(&mysql_) != NULL);
-
-	if (mysql_real_connect(&mysql_, host.c_str(), user.c_str(), passwd.c_str(), database.c_str(), port, NULL, 0) != &mysql_) {
+    mysql_options(&mysql_, MYSQL_OPT_READ_TIMEOUT, &read_timeout_);
+    mysql_options(&mysql_, MYSQL_OPT_CONNECT_TIMEOUT , &connect_timeout_);
+	if (mysql_real_connect(&mysql_, host_.c_str(), user_.c_str(), passwd_.c_str(), database_.c_str(), port_, NULL, 0) != &mysql_) {
 		throw Exception(&mysql_);
 	}
 
@@ -137,7 +148,7 @@ void Connection::connect(const std::string &user, const std::string &passwd, con
 
 void Connection::reconnect() {
 	disconnect();
-	connect(user_, passwd_, database_, host_, port_,charset_,autocommit_);
+	connect();
 }
 
 Statement Connection::createStatement() {
