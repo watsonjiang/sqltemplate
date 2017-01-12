@@ -210,7 +210,7 @@ ResultSet Statement::execute() {
 
 	boost::shared_ptr<MYSQL_RES> pResult(result, FreeMySQLResult());
 
-	return ResultSet(pResult, affected_row,mysql_insert_id(mysql_) );
+	return ResultSet(pResult, affected_row, mysql_insert_id(mysql_) );
 }
 
 static std::string join(const std::vector<int64_t> &vec, const char *c) {

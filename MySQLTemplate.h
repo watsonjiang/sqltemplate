@@ -230,8 +230,12 @@ public:
 	virtual ~MySQLTemplate() {}
 
 	MySQLTransaction beginTransaction();
-
-	bool execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args);
+    /*
+     * execute the sql
+     *
+     * return: ok - true  otherwise false
+     */
+    bool execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args);
 
 private:	
 	std::string dbname_;

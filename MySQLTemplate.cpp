@@ -70,9 +70,10 @@ bool MySQLTemplate::execSQL(Callback *callback, const char *sql, const std::vect
 			return true;
 		} else if ( err >=2000 && err <= 2018) {
 			//Fatal error, unrecoverable
-			if ( conn ) 
+			if ( conn ) { 
 				conn->disconnect();
                 conn->release(); 
+            }
 		} else {
 			if ( !conn->autocommit() )
 				conn->rollback() ;

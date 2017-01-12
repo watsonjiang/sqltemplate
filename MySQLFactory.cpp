@@ -61,12 +61,11 @@ namespace server {
 						src->config.database.c_str(),
 						e.what());*/
 					conn->disconnect();
-					return NULL;
 				}
 
 				//conn->setCharSet("utf8");
 			}
-
+            conn->factory_ = this;
 			return conn;
 		}
         

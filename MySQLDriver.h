@@ -123,6 +123,7 @@ namespace server {
 		class Connection {
 		public:
 			friend class Statement;
+            friend class MySQLFactory; 
 
 			Connection();
 

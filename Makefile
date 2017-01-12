@@ -4,7 +4,7 @@ OBJS=MySQLDriver.o \
 	 MySQLFactory.o \
 	 MySQLTemplate.o \
 
-CXXFLAGS=-I/usr/include/mysql
+CXXFLAGS=-I/usr/include/mysql -g
 
 all:main
 
@@ -12,9 +12,9 @@ clean:
 	$(RM) $(OBJS) main.o
 
 libmysqltemplate.a: $(OBJS)
-	ar rcs $@ $<
+	ar rcs $@ $^
 
 main:main.o libmysqltemplate.a
-	echo $(CXX) -lmysqlclient -o $@ $^
+	$(CXX) -lmysqlclient -lpthread -o $@ $^
 
 .PHONY:clean all

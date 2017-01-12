@@ -13,6 +13,7 @@ namespace server {
 
 	    class Connection;
 		struct MySQLConfig {
+            MySQLConfig():autocommit(1){}
 			std::string host;
 			unsigned short port;
 			std::string user;
