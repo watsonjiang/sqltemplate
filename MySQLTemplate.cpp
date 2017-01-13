@@ -66,18 +66,18 @@ bool MySQLTemplate::execSQL(Callback *callback, const char *sql, const std::vect
 		if (err == 0) {
 			if ( !conn->autocommit() )
 				conn->commit() ;
-            conn->release();
+            conn->close();
 			return true;
 		} else if ( err >=2000 && err <= 2018) {
 			//Fatal error, unrecoverable
 			if ( conn ) { 
 				conn->disconnect();
-                conn->release(); 
+                conn->close(); 
             }
 		} else {
 			if ( !conn->autocommit() )
 				conn->rollback() ;
-            conn->release();
+            conn->close();
 			break;
 		}
 	}

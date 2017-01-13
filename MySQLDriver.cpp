@@ -162,7 +162,7 @@ void Connection::disconnect() {
 	}
 }
 
-void Connection::release() {
+void Connection::close() {
     factory_->releaseConnection(database_, this);  
 }
 

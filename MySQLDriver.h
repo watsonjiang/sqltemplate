@@ -159,7 +159,7 @@ namespace server {
 
 			bool autocommit() const { return autocommit_ ; }
 			
-			void release();   //release this connection to the pool
+			void close();   //release this connection to the pool
 		private:
 			bool connected_;
 			std::string user_;
