@@ -6,13 +6,10 @@
 #include <pthread.h>
 #include <map>
 #include <vector>
-#include <boost/shared_ptr.hpp>
 
 namespace server {
 	namespace mysqldb {
         class ConnectionPool;
-        typedef boost::shared_ptr<ConnectionPool> POOL_TYPE;
-        typedef std::map<std::string, POOL_TYPE> SRC_MAP;
 
 		struct MySQLConfig {
             MySQLConfig():autocommit(1), read_timeout(30), connect_timeout(3){}
@@ -28,29 +25,51 @@ namespace server {
             unsigned int maxconns;
 		};
 
-        class ConnectionPool;
+        class PoolableConnection;
+
+        struct __RefCounter {
+            __RefCounter();
+            void addRef();
+            int decRef();
+            int ref_count_;
+            pthread_mutex_t ref_count_lock_;
+        };
+        struct __ConnectionPoolData {
+            __ConnectionPoolData(unsigned int max_pool_size);
+            ~__ConnectionPoolData();
+            std::vector<PoolableConnection*> cache_;   //pooling connections
+            pthread_mutex_t cache_lock_;
+            pthread_cond_t cache_not_empty_cond_;
+            unsigned int max_pool_size_;
+        };
+
+
+        class ConnectionPool {
+        friend class PoolableConnection;
+        friend class MySQLFactory;
+        public:
+            ConnectionPool(unsigned max_pool_size);
+            ConnectionPool(const ConnectionPool&);
+            ConnectionPool& operator =(const ConnectionPool&);
+            ~ConnectionPool();
+
+
+        protected:
+            PoolableConnection *getConnection();
+            void releaseConnection(PoolableConnection * c);
+
+        private:
+            __RefCounter *rc_;
+            __ConnectionPoolData *pool_data_;
+		};
+
         class PoolableConnection : public Connection {
         public:
             PoolableConnection(const MySQLConfig& config);
             void close(); 
 
-            POOL_TYPE  pool_;
+            ConnectionPool pool_;
         };
-
-	    class ConnectionPool {
-        friend class PoolableConnection;
-        friend class MySQLFactory;
-        public:
-            ConnectionPool(unsigned max_pool_size);
-            ~ConnectionPool();
-        protected:
-            void releaseConnection(PoolableConnection * c);
-        private:
-            std::vector<PoolableConnection*> cache_;   //pooling connections
-			pthread_mutex_t cache_lock_;
-			pthread_cond_t cache_not_empty_cond_;
-			unsigned int max_pool_size_;
-		};
 
 
 		class MySQLFactory {
@@ -64,6 +83,7 @@ namespace server {
 			Connection *getConnection(const std::string &name);  //allocate a connection from pool
 
 		private:
+            typedef std::map<std::string, ConnectionPool> SRC_MAP;
 			SRC_MAP sources_;
 			pthread_mutex_t src_map_lock_;
 		};

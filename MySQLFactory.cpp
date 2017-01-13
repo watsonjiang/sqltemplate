@@ -13,29 +13,23 @@ namespace server {
                                             config.connect_timeout,
                                             config.read_timeout,
                                             config.charset,
-                                            config.autocommit) {
+                                            config.autocommit),
+                                 pool_(0){
              
         }
 
         void PoolableConnection::close() {
-            pool_->releaseConnection(this);
-            pool_.reset();
+            pool_.releaseConnection(this);
         }
 
         /* ConnectionPool */
-        ConnectionPool::ConnectionPool(unsigned int max_pool_size):max_pool_size_(max_pool_size) {
+        __ConnectionPoolData::__ConnectionPoolData(unsigned int max_pool_size) {
             pthread_mutex_init(&cache_lock_, NULL);
             pthread_cond_init(&cache_not_empty_cond_, NULL);
+            max_pool_size_ = max_pool_size;
         }
 
-        void ConnectionPool::releaseConnection(PoolableConnection *c) {
-            pthread_mutex_lock(&cache_lock_);
-            cache_.push_back(c);
-            pthread_cond_signal(&cache_not_empty_cond_);
-            pthread_mutex_unlock(&cache_lock_);
-        }
-
-        ConnectionPool::~ConnectionPool() {
+        __ConnectionPoolData::~__ConnectionPoolData() {
             //disconnect all under connections
             int n = max_pool_size_;
             while(0 < n) {
@@ -52,6 +46,79 @@ namespace server {
             }
         }
 
+        ConnectionPool::ConnectionPool(unsigned int max_pool_size) {
+            pool_data_ = new __ConnectionPoolData(max_pool_size);
+            rc_ = new __RefCounter();
+            rc_->addRef(); 
+            printf("!!!!!construct %p pool %p  rc %d\n", this, pool_data_, rc_->ref_count_);
+        }
+
+        ConnectionPool::ConnectionPool(const ConnectionPool& p):pool_data_(p.pool_data_),
+                                                                rc_(p.rc_){
+            rc_->addRef();
+            printf("!!!!!copy construct %p pool %p  rc %d\n", this, pool_data_, rc_->ref_count_);
+        }
+
+        ConnectionPool& ConnectionPool::operator =(const ConnectionPool& p) {
+            if (&p != this) {
+                //TODO: timeout and retry to avoid deadlock
+                if(rc_->decRef() == 0) {
+                    delete pool_data_;
+                    delete rc_;
+                }
+                pool_data_ = p.pool_data_;
+                rc_ = p.rc_;
+                rc_->addRef();
+            }
+            return *this;
+        }
+
+        ConnectionPool::~ConnectionPool() {
+            printf("!!!!!!destruct %p pool %p rc %d\n", this, pool_data_, rc_->ref_count_);
+            if(rc_->decRef() == 0) {
+               delete pool_data_;
+               delete rc_;
+            }
+        }
+
+        PoolableConnection* ConnectionPool::getConnection() {
+			pthread_mutex_lock(&pool_data_->cache_lock_);
+			while(pool_data_->cache_.size()<=0)
+			    pthread_cond_wait(&pool_data_->cache_not_empty_cond_, &pool_data_->cache_lock_);
+			PoolableConnection *conn = pool_data_->cache_.back();
+            conn->pool_ = *this;
+			pool_data_->cache_.pop_back();
+			pthread_mutex_unlock(&pool_data_->cache_lock_);
+            return conn;
+        }
+
+        void ConnectionPool::releaseConnection(PoolableConnection *c) {
+            pthread_mutex_lock(&pool_data_->cache_lock_);
+            pool_data_->cache_.push_back(c);
+            c->pool_ = ConnectionPool(0);
+            pthread_cond_signal(&pool_data_->cache_not_empty_cond_);
+            pthread_mutex_unlock(&pool_data_->cache_lock_);
+        }
+
+        __RefCounter::__RefCounter() {
+            ref_count_ = 0;
+            pthread_mutex_init(&ref_count_lock_, NULL);
+        }
+
+        void __RefCounter::addRef() {
+            pthread_mutex_lock(&ref_count_lock_);
+            ref_count_++;
+            pthread_mutex_unlock(&ref_count_lock_);
+        }
+
+        int __RefCounter::decRef() {
+            unsigned int ret;
+            pthread_mutex_lock(&ref_count_lock_);
+            ret = --ref_count_; 
+            pthread_mutex_unlock(&ref_count_lock_);
+            return ret;
+        }
+
 		/* MySQLFactory */
 		MySQLFactory::MySQLFactory(){
             pthread_mutex_init(&src_map_lock_, NULL); 
@@ -60,7 +127,8 @@ namespace server {
 		MySQLFactory::~MySQLFactory() {}
 
         struct __pool_ref_holder {
-           POOL_TYPE  pool_;
+            __pool_ref_holder():pool_(0){}
+            ConnectionPool  pool_;
         };
         static void* __pool_destroyer(void *args) {
             __pool_ref_holder * h = (__pool_ref_holder*)args;
@@ -70,17 +138,15 @@ namespace server {
 		void MySQLFactory::addSource(const std::string &name, const MySQLConfig &config) {
             pthread_mutex_lock(&src_map_lock_);
 
-            ConnectionPool *p = new ConnectionPool(config.maxconns);
-            SRC_MAP::mapped_type v = SRC_MAP::mapped_type(p);
+            ConnectionPool p = ConnectionPool(config.maxconns);
             for(int i=0;i<config.maxconns;i++)
             {
                 PoolableConnection *pc = new PoolableConnection(config);
-                pc->pool_ = v;
-                v->cache_.push_back(pc);
+                p.pool_data_->cache_.push_back(pc);
             }
             SRC_MAP::const_iterator it = sources_.find(name);
             if(it == sources_.end()) {
-                sources_.insert(std::make_pair(name, v));
+                sources_.insert(std::make_pair(name, p));
             }else{
                 //spawn a thread to destruct old pool. to avoid stuck this thread.
                 __pool_ref_holder * prh = new __pool_ref_holder;
@@ -88,8 +154,9 @@ namespace server {
                 pthread_t th;
                 pthread_create(&th, NULL, __pool_destroyer, (void*)prh);
                 sources_.erase(name);
-                sources_.insert(std::make_pair(name, v));
+                sources_.insert(std::make_pair(name, p));
             }
+            printf("!!!!!!poolname %s pool %p ref %d created.\n", name.data(), p.pool_data_, p.rc_->ref_count_);
             pthread_mutex_unlock(&src_map_lock_);
 		}
 
@@ -102,14 +169,8 @@ namespace server {
 				return NULL;
 			}
             
-            POOL_TYPE src = it->second;
-			pthread_mutex_lock(&src->cache_lock_);
-			while(src->cache_.size()<=0)
-			    pthread_cond_wait(&src->cache_not_empty_cond_, &src->cache_lock_);
-			PoolableConnection *conn = src->cache_.back();
-            conn->pool_ = src;
-			src->cache_.pop_back();
-			pthread_mutex_unlock(&src->cache_lock_);
+            ConnectionPool src = it->second;
+			PoolableConnection *conn = src.getConnection();
 
 			if (!conn->connected()) {
 				//YY_LOG_ERROR( "mysql db:%s not connect, try reconnect", name.c_str());
