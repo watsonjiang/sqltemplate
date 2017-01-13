@@ -31,7 +31,7 @@ sample1(MySQLTemplate& template_)
 	NOPCallback cb;
 	
 	bool sqlRet = template_.execute(&cb, sql, new_name, id);
-    if (!sqlRet) {
+    if (sqlRet) {
         printf("Fail to execute sql: %s errcode: %d errmsg:%s\n",
                 sql, cb.error_, cb.errorMsg_.data());
     }
@@ -63,7 +63,7 @@ sample2(MySQLTemplate& template_)
 	
 	const char *sql = "select id, name from emp";
 	bool sqlRet = template_.execute(&cb, sql);
-	if(!sqlRet) {
+	if(sqlRet) {
 	    printf("Fail to execute sql: %s errcode: %d errmsg:%s\n",
                 sql, cb.error_, cb.errorMsg_.data());
 		return;
@@ -84,7 +84,7 @@ sample3(MySQLTemplate& template_)
 	NOPCallback cb;
 	
 	bool sqlRet = template_.execute(&cb, sql);
-    if (!sqlRet) {
+    if (sqlRet) {
         printf("Fail to execute sql: %s errcode: %d errmsg:%s\n",
                 sql, cb.error_, cb.errorMsg_.data());
     }
@@ -97,11 +97,12 @@ thread_loop(void* p)
 {
     MySQLTemplate * template_ = (MySQLTemplate *)p;
     for(;;) {
+        sleep(1);
         try{
         //sample(template_);
         //sample1(template_);
-        //sample2(*template_);
-        sample3(*template_);
+        sample2(*template_);
+        //sample3(*template_);
         }catch(Exception &e) {
             printf("error: %s\n", e.what()); 
         }catch (...) {
@@ -128,6 +129,11 @@ main()
     for(int i=0;i<3;i++) {
         pthread_create(&th, NULL, thread_loop, (void*)&template_);
     }
+   
+    sleep(3);
+    printf("change source!!!!!\n");
+    cfg.host = "124.0.1.3";
+    server::mysqldb::MYSQL_FACTORY::instance().addSource("testdb", cfg);
 
     for(;;) {
         sleep(1);

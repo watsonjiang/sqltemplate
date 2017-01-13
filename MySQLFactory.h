@@ -10,8 +10,10 @@
 
 namespace server {
 	namespace mysqldb {
+        class ConnectionPool;
+        typedef boost::shared_ptr<ConnectionPool> POOL_TYPE;
+        typedef std::map<std::string, POOL_TYPE> SRC_MAP;
 
-	    class Connection;
 		struct MySQLConfig {
             MySQLConfig():autocommit(1), read_timeout(30), connect_timeout(3){}
 			std::string host;
@@ -26,6 +28,31 @@ namespace server {
             unsigned int maxconns;
 		};
 
+        class ConnectionPool;
+        class PoolableConnection : public Connection {
+        public:
+            PoolableConnection(const MySQLConfig& config);
+            void close(); 
+
+            POOL_TYPE  pool_;
+        };
+
+	    class ConnectionPool {
+        friend class PoolableConnection;
+        friend class MySQLFactory;
+        public:
+            ConnectionPool(unsigned max_pool_size);
+            ~ConnectionPool();
+        protected:
+            void releaseConnection(PoolableConnection * c);
+        private:
+            std::vector<PoolableConnection*> cache_;   //pooling connections
+			pthread_mutex_t cache_lock_;
+			pthread_cond_t cache_not_empty_cond_;
+			unsigned int max_pool_size_;
+		};
+
+
 		class MySQLFactory {
 		public:
 			MySQLFactory();
@@ -36,18 +63,9 @@ namespace server {
 
 			Connection *getConnection(const std::string &name);  //allocate a connection from pool
 
-            void releaseConnection(std::string& name, Connection * c);
-
 		private:
-			struct Source {
-                std::vector<Connection*> cache;   //pooling connections
-				pthread_mutex_t cache_lock;
-				pthread_cond_t cache_not_empty_cond;
-				MySQLConfig config;
-			};
-            typedef std::map<std::string, boost::shared_ptr<Source> > SRC_MAP;
 			SRC_MAP sources_;
-			pthread_mutex_t src_map_lock;
+			pthread_mutex_t src_map_lock_;
 		};
 		typedef singleton_default<MySQLFactory> MYSQL_FACTORY ;
 

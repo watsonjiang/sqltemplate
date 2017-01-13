@@ -56,18 +56,19 @@ MySQLTransaction MySQLTemplate::beginTransaction() {
 	return tx;
 }
 
-bool MySQLTemplate::execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *param) {
+int MySQLTemplate::execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *param) {
 	static int max_reconnect = 2;
-
+    int last_err;
 	for (int i = 0; i < max_reconnect; ++i) {
 		Connection* conn = server::mysqldb::MYSQL_FACTORY::instance().getConnection(dbname_);
 
 		int err = executeSQL(callback, preview(), conn, sql, param);
+        last_err = err;
 		if (err == 0) {
 			if ( !conn->autocommit() )
 				conn->commit() ;
             conn->close();
-			return true;
+			return 0;
 		} else if ( err >=2000 && err <= 2018) {
 			//Fatal error, unrecoverable
 			if ( conn ) { 
@@ -82,7 +83,7 @@ bool MySQLTemplate::execSQL(Callback *callback, const char *sql, const std::vect
 		}
 	}
 
-	return false;
+	return last_err;
 }
 
 /* MySQLTransaction */
@@ -106,7 +107,7 @@ bool MySQLTransaction::begin() {
 	return true;
 }
 
-bool MySQLTransaction::execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args) {
+int MySQLTransaction::execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args) {
 	int err = executeSQL(callback, preview(), conn_, sql, args);
 	if (err == 0) {		
 		return true;
@@ -115,7 +116,7 @@ bool MySQLTransaction::execSQL(Callback *callback, const char *sql, const std::v
 		conn_->disconnect();
 	}
 	conn_ = NULL;
-	return false;
+	return err;
 }
 
 

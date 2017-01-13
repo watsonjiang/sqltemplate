@@ -119,7 +119,6 @@ namespace server {
 		};	//ResultSet
 
 		class Statement;
-        class MySQLFactory;
 		class Connection {
 		public:
 			friend class Statement;
@@ -135,7 +134,7 @@ namespace server {
                        const std::string& charset="",
                        bool autocommit=true);
 
-			~Connection();
+			virtual ~Connection();
 
 			void setAutoCommit(bool yes);
 
@@ -159,7 +158,7 @@ namespace server {
 
 			bool autocommit() const { return autocommit_ ; }
 			
-			void close();   //release this connection to the pool
+			virtual void close();   //release this connection to the pool
 		private:
 			bool connected_;
 			std::string user_;
@@ -172,7 +171,6 @@ namespace server {
             unsigned int read_timeout_;
 			bool        autocommit_ ;
 			MYSQL mysql_;
-            MySQLFactory* factory_;
 		};	//Connection
 
 

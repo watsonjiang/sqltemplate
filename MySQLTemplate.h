@@ -130,12 +130,12 @@ public:
 
 	virtual ~SQLTemplate() {}
 
-	bool execute(Callback *callback, const char *sql) {
+	int execute(Callback *callback, const char *sql) {
 		return execSQL(callback, sql, NULL);
 	}
 
 	template<typename Arg1>
-	bool execute(Callback *callback, const char *sql, const Arg1 &a1) {
+	int execute(Callback *callback, const char *sql, const Arg1 &a1) {
 		std::vector<Parameter> param;
 		param.push_back(Parameter(a1));
 
@@ -143,7 +143,7 @@ public:
 	}
 
 	template<typename Arg1, typename Arg2>
-	bool execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2) {
+	int execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2) {
 		std::vector<Parameter> param;
 		param.push_back(Parameter(a1));
 		param.push_back(Parameter(a2));
@@ -152,7 +152,7 @@ public:
 	}
 
 	template<typename Arg1, typename Arg2, typename Arg3>
-	bool execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3) {
+	int execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3) {
 		std::vector<Parameter> param;
 		param.push_back(Parameter(a1));
 		param.push_back(Parameter(a2));
@@ -162,7 +162,7 @@ public:
 	}
 
 	template<typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-	bool execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3, const Arg4 &a4) {
+	int execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3, const Arg4 &a4) {
 		std::vector<Parameter> param;
 		param.push_back(Parameter(a1));
 		param.push_back(Parameter(a2));
@@ -173,7 +173,7 @@ public:
 	}
 
 	template<typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
-	bool execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3, const Arg4 &a4, const Arg5 &a5) {
+    int execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3, const Arg4 &a4, const Arg5 &a5) {
 		std::vector<Parameter> param;
 		param.push_back(Parameter(a1));
 		param.push_back(Parameter(a2));
@@ -185,7 +185,7 @@ public:
 	}
 
 	template<typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
-	bool execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3, const Arg4 &a4, const Arg5 &a5, const Arg6 &a6) {
+	int execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3, const Arg4 &a4, const Arg5 &a5, const Arg6 &a6) {
 		std::vector<Parameter> param;
 		param.push_back(Parameter(a1));
 		param.push_back(Parameter(a2));
@@ -198,7 +198,7 @@ public:
 	}
 
 	template<typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7>
-	bool execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3, const Arg4 &a4, const Arg5 &a5, const Arg6 &a6, const Arg7 &a7) {
+	int execute(Callback *callback, const char *sql, const Arg1 &a1, const Arg2 &a2, const Arg3 &a3, const Arg4 &a4, const Arg5 &a5, const Arg6 &a6, const Arg7 &a7) {
 		std::vector<Parameter> param;
 		param.push_back(Parameter(a1));
 		param.push_back(Parameter(a2));
@@ -211,7 +211,7 @@ public:
 		return execSQL(callback, sql, &param);
 	}
 
-	virtual bool execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args) = 0;
+	virtual int execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args) = 0;
 
 	bool preview() { return preview_; }
 
@@ -233,9 +233,9 @@ public:
     /*
      * execute the sql
      *
-     * return: ok - true  otherwise false
+     * return: ok - 0, otherwise error
      */
-    bool execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args);
+    int execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args);
 
 private:	
 	std::string dbname_;
@@ -251,7 +251,7 @@ public:
 
 	bool begin();
 
-	bool execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args);
+	int execSQL(Callback *callback, const char *sql, const std::vector<Parameter> *args);
 
 	bool commit();
 

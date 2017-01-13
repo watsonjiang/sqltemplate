@@ -114,6 +114,7 @@ Connection::Connection(const std::string &user,
 		charset_ = "utf8" ;
 	else
 		charset_ = charset ;
+    printf("Connection %s created!.\n", host_.data());
 }
 
 Connection::~Connection() {
@@ -121,6 +122,7 @@ Connection::~Connection() {
 #ifdef LINUX
 	mysql_thread_end();
 #endif
+    printf("Connection %s destructed!.\n", host_.data());
 }
 
 void Connection::connect(){
@@ -163,7 +165,7 @@ void Connection::disconnect() {
 }
 
 void Connection::close() {
-    factory_->releaseConnection(database_, this);  
+    return;  
 }
 
 void Connection::begin() {
