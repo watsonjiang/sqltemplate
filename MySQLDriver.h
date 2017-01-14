@@ -167,8 +167,8 @@ namespace server {
 			std::string charset_ ;
 			std::string host_;
 			unsigned short port_;
-            unsigned int connect_timeout_;
-            unsigned int read_timeout_;
+         unsigned int connect_timeout_;
+         unsigned int read_timeout_;
 			bool        autocommit_ ;
 			MYSQL mysql_;
 		};	//Connection
